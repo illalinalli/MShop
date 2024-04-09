@@ -1,0 +1,360 @@
+﻿@using static MShop.Controllers.HomeController;
+@using static MShop.Models.Database;
+@using MShop.Models;
+@using Microsoft.AspNetCore.Components.Forms;
+@using MongoDB.Bson;
+@using MongoDB.Driver;
+@using System.IO;
+@code {
+    //public static readonly ReplaceOptions ReplaceOptionsUpsert = new ReplaceOptions() { IsUpsert = true };
+    private ObjectId selectedAnimalType;
+    private ObjectId selectedBreed;
+    Item item = new();
+    AnimalType animalType = new();
+    Breed breed = new();    
+    List<Breed> breeds = new();
+    List<ObjectId> properties = new();
+    string? title;
+    string? longText;
+    List<byte[]> photos = new();
+
+    List<AnimalType> animalTypes = AnimalTypeCollection.Find(new BsonDocument()).ToList();
+    public static List<PropertyType> propertyTypes = PropertyTypeCollection.Find(new BsonDocument()).ToList();
+    public static List<PropertyValue> propertyValues = PropertyValueCollection.Find(new BsonDocument()).ToList();
+    Dictionary<ObjectId, bool> checkedStates = new();
+
+    private void HandleAnimalTypeChange(ChangeEventArgs args)
+    {
+        if (args.Value == null) return;
+
+        animalType.Id = ObjectId.Parse(args.Value.ToString());
+        //selectedAnimalType = ObjectId.Parse(args.Value.ToString());
+
+        if (animalType.Id != ObjectId.Empty)
+        {
+            breeds = BreedCollection
+             .Find(x => x.AnimalTypeRef == animalType.Id)
+             .ToList();
+        }
+        StateHasChanged();
+    }
+
+    private void HandleAnimalBreedChange(ChangeEventArgs args)
+    {
+        if (args.Value == null) return;
+
+        breed.Id = ObjectId.Parse(args.Value.ToString());
+
+    }
+
+    private ObjectId selectedBreedId;
+
+    //private void HandleAnimalTypeChange(ChangeEventArgs args)
+    //{
+    //    if (args.Value == null) return;
+
+    //    var typeId = ObjectId.Parse(args.Value.ToString());
+
+    //    if (typeId != ObjectId.Empty)
+    //    {
+    //        breeds = BreedCollection
+    //            .Find(x => x.AnimalTypeRef == typeId)
+    //            .ToList();
+    //    }
+    //    selectedBreedId = ObjectId.Empty; // Сбрасываем выбранную породу при изменении типа животного
+    //}
+
+    //private void HandleAnimalBreedChange(ChangeEventArgs args)
+    //{
+    //    if (args.Value == null) return;
+
+    //    selectedBreedId = ObjectId.Parse(args.Value.ToString());
+    //    // Здесь вы можете выполнить нужные действия с выбранной породой
+    //}
+
+    bool IsChecked(ObjectId id)
+    {
+        return checkedStates.ContainsKey(id) && checkedStates[id];
+    }
+
+    void HandleCheck(ChangeEventArgs e, ObjectId id)
+    {
+        if (e.Value == null || id == ObjectId.Empty) return;
+        var isChecked = (bool)e.Value;
+        if (isChecked)
+        {
+            properties.Add(id);
+        }
+        else
+        {
+            properties.Remove(id);
+        }
+        checkedStates[id] = isChecked;
+        StateHasChanged();
+    }
+
+    void GetTitle(ChangeEventArgs e)
+    {
+        title = e?.Value?.ToString();
+    }
+
+    void GetLongTxt(ChangeEventArgs e)
+    {
+        longText = e?.Value?.ToString();
+    }
+    double price;
+    void GetPrice(ChangeEventArgs e)
+    {
+        price = Convert.ToDouble(e?.Value?.ToString());
+    }
+
+    private async void GetAnimalPhotos(InputFileChangeEventArgs e)
+    {
+        foreach (var file in e.GetMultipleFiles())
+        {
+            if (file.Size <= 512000) // проверяем размер файла
+            {
+                var data = new byte[file.Size];
+                var fileName = file.Name;
+
+                using (var memoryStream = new MemoryStream())
+                {
+                    using (var stream = file.OpenReadStream())
+                    {
+                        await stream.CopyToAsync(memoryStream);
+                    }
+                    data = memoryStream.ToArray();
+                    photos.Add(data);
+                }
+            }
+            else
+            {
+                // обработка случая, когда файл превышает максимальный размер
+                // можно выбрасывать исключение, выводить сообщение об ошибке и т. д.
+            }
+        }
+    }
+
+    // сделать проверку на валидность полей!!!!
+    void Save()
+    {
+        item.Properties = properties;
+        if (breed.Id == ObjectId.Empty)
+        {
+            breed.Id = breeds.OrderBy(x => x.Name).First().Id;
+        }
+        item.BreedRef = breed.Id;
+        item.IsPublished = true;
+        //item.UserRef = CurUser.Id;
+        item.Title = title;
+        item.LongDescription = longText;
+        item.Images = photos;
+        item.CreationDate = DateTimeOffset.Now;
+        item.Price = price;
+        // создание фильтра для поиска существующей записи
+        var filter = Builders<Item>.Filter.Eq("_id", item.Id);
+
+        // выполнение операции upsert
+        ItemCollection?.ReplaceOneAsync(filter, item, ReplaceOptionsUpsert);
+
+        StateHasChanged();
+    }
+}
+
+<div class="card">
+    <div class="card-body">
+        <div class="col-12">
+            <h3 class="card-title">Создать объявление</h3>
+        </div>
+        <div class="card-text">
+            <div class="row mb-3">
+                <div>
+                    <p class="card-title" for="itemTitle">Название публикации:</p>
+                    
+                        <input type="text" class="form-control" id="itemTitle" @onchange="GetTitle">
+                   
+                </div>
+                <div>
+                    <label class="card-title" for="itemType">Вид животного:</label>
+                    
+                        <select id="itemType" class="form-control" value="@animalType.Id" @onchange="HandleAnimalTypeChange">
+                            @foreach (var t in animalTypes.OrderBy(x => x.Name))
+                            {
+                                <option value="@t.Id">@t.Name</option>
+                            }
+                        </select>   
+                    
+                </div>
+            </div>
+        </div>
+        <div class="col-12">
+            <div class="row mb-3">
+                
+            </div>
+        </div>
+
+        <div class="col-12">
+            <div class="row mb-3">
+                <label class="col-form-label col-lg-4 col-xxl-2" for="itemBreed">Порода животного:</label>
+                <div class="col-lg-9">
+                    <select id="itemBreed" class="form-control" value="@breed.Id" @onchange="HandleAnimalBreedChange">
+                        @if (breeds != null)
+                        {
+                            @foreach (var b in breeds.OrderBy(x => x.Name))
+                            {
+                                <option value="@b.Id">@b.Name</option>
+                            }
+                        }
+                        @*@if (selectedBreedId == ObjectId.Empty && breeds.Count != 0)
+                        {
+                            selectedBreedId = breeds.OrderBy(x => x.Name).FirstOrDefault().Id;
+                        }*@
+                    </select>
+                </div>
+            </div>
+        </div>
+        <div class="col-12">
+            <div class="row mb-3">
+                @foreach (var t in propertyTypes)
+                {
+                    var labelName = t.Name + ":";
+                    <label class="col-form-label col-lg-4 col-xxl-2" for="@t.Id">@labelName</label>
+                    <div class="col-lg-9">
+                        @foreach (var v in propertyValues.FindAll(x => x.PropTypeRef == t.Id))
+                        {
+                            <div class="mb-1">
+                                <input class="form-check-input" type="checkbox" name="radios" id="@v.Id" value="@v.Name"
+                                checked="@IsChecked(v.Id)" @onchange="e => HandleCheck(e, v.Id)">
+                                <label class="form-check-label" for="@v.Id">@v.Name</label>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+        <div class="col-12">
+            <div class="row mb-3">
+                <label class="col-form-label col-lg-4 col-xxl-2" for="itemLongDis">Описание к публикации:</label>
+                <div class="col-lg-9">
+                    <textarea class="form-control" style="resize: none;" id="itemLongDis" rows="3" @onchange="GetLongTxt"/>
+                </div>
+            </div>
+        </div>
+        <div class="col-12">
+            <div class="row mb-3">
+                <label class="col-form-label col-lg-4 col-xxl-2" for="formFileMultiple">Загрузите фотографии животного:</label>
+                <div class="col-lg-9">
+                    <InputFile class="form-control" type="file" id="formFileMultiple" multiple OnChange="GetAnimalPhotos" />
+                </div>
+            </div>
+        </div>
+        <div class="col-12">
+            <div class="row mb-3">
+                <label class="col-form-label col-lg-4 col-xxl-2" for="itemLongDis">Установите цену:</label>
+                <div class="col-lg-9">
+                    <input type="number" class="form-control" @onchange="GetPrice" />
+                </div>
+            </div>
+        </div>
+        <div class="col-12">
+            <a href="/Home/ShopPage" class="btn btn-outline-primary mb-2" @onclick="Save">Опубликовать</a>
+        </div>
+    </div>
+</div>
+
+
+@*<div class="card">
+    <div class="card-body">
+        <div class="col-12">
+            <h3 style="text-align: center; font-weight: 400;">Создать объявление</h3>
+        </div>
+        <div class="col-12">
+            <div class="row mb-3">
+                <label class="col-form-label col-lg-4 col-xxl-2" for="itemTitle">Название публикации:</label>
+                <div class="col-lg-9">
+                    <input type="text" class="form-control" id="itemTitle" @onchange="GetTitle">
+                </div>
+            </div>
+        </div>
+        <div class="col-12">
+            <div class="row mb-3">
+                <label class="col-form-label col-lg-4 col-xxl-2" for="itemType">Вид животного:</label>
+                <div class="col-lg-9">
+                    <select id="itemType" class="form-control" value="@animalType.Id" @onchange="HandleAnimalTypeChange">
+                        @foreach (var t in animalTypes.OrderBy(x => x.Name))
+                        {
+                            <option value="@t.Id">@t.Name</option>
+                        }
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12">
+            <div class="row mb-3">
+                <label class="col-form-label col-lg-4 col-xxl-2" for="itemBreed">Порода животного:</label>
+                <div class="col-lg-9">
+                    <select id="itemBreed" class="form-control" value="@breed.Id" @onchange="HandleAnimalBreedChange">
+                        @if (breeds != null)
+                        {
+                            @foreach (var b in breeds.OrderBy(x => x.Name))
+                            {
+                                <option value="@b.Id">@b.Name</option>
+                            }
+                        }
+                        @if (selectedBreedId == ObjectId.Empty && breeds.Count != 0)
+                        {
+                            selectedBreedId = breeds.OrderBy(x => x.Name).FirstOrDefault().Id;
+                        }
+                    @*</select>
+                </div>
+            </div>
+        </div>
+        <div class="col-12">
+            <div class="row mb-3">
+                @foreach (var t in propertyTypes)
+                {
+                    var labelName = t.Name + ":";
+                    <label class="col-form-label col-lg-4 col-xxl-2" for="@t.Id">@labelName</label>
+                    <div class="col-lg-9">
+                        @foreach (var v in propertyValues.FindAll(x => x.PropTypeRef == t.Id))
+                        {
+                            <div class="mb-1">
+                                <input class="form-check-input" type="checkbox" name="radios" id="@v.Id" value="@v.Name"
+                                checked="@IsChecked(v.Id)" @onchange="e => HandleCheck(e, v.Id)">
+                                <label class="form-check-label" for="@v.Id">@v.Name</label>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+        <div class="col-12">
+            <div class="row mb-3">
+                <label class="col-form-label col-lg-4 col-xxl-2" for="itemLongDis">Описание к публикации:</label>
+                <div class="col-lg-9">
+                    <textarea class="form-control" style="resize: none;" id="itemLongDis" rows="3" @onchange="GetLongTxt"/>
+                </div>
+            </div>
+        </div>
+        <div class="col-12">
+            <div class="row mb-3">
+                <label class="col-form-label col-lg-4 col-xxl-2" for="formFileMultiple">Загрузите фотографии животного:</label>
+                <div class="col-lg-9">
+                    <InputFile class="form-control" type="file" id="formFileMultiple" multiple OnChange="GetAnimalPhotos" />
+                </div>
+            </div>
+        </div>
+        <div class="col-12">
+            <div class="row mb-3">
+                <label class="col-form-label col-lg-4 col-xxl-2" for="itemLongDis">Установите цену:</label>
+                <div class="col-lg-9">
+                    <input type="number" class="form-control" @onchange="GetPrice" />
+                </div>
+            </div>
+        </div>
+        <div class="col-12">
+            <a href="/Home/ShopPage" class="btn btn-outline-primary mb-2" @onclick="Save">Опубликовать</a>
+        </div>
+    </div>
+</div>*@

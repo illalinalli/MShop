@@ -1,0 +1,63 @@
+﻿@using MShop.Models;
+@using static MShop.Models.Database;
+@using MongoDB.Bson;
+@using MongoDB.Driver;
+@using MShop.Views.Advertisement;
+
+@code {
+
+    public AdvertisementDetailComponent AdvertisementDetail = new();
+    public List<Item> Monkeys = new();
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        var allItems = ItemCollection.Find(new BsonDocument()).ToList();
+        Monkeys = allItems.FindAll(x => x.Properties.Contains(new ObjectId("660be1f2508b9c0f454f5d62")));
+    }
+    public void ShowDetails(Item item)
+    {
+        AdvertisementDetail.ShowDialog(item, null, null);
+    }
+}
+
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col" style="font-weight:600; font-size: medium;">Наши обезьянки</div>
+    </div>
+    <div class="row">
+            @if (Monkeys.Count != 0)
+            {
+
+                foreach (var item in Monkeys)
+                {
+                    if (item.Images != null)
+                    {
+                        <div class="col-xl-3 col-lg-4 col-md-5 col-sm-6 col-12 pt-3 pb-5">
+                            <div class="card" style="width: 24rem;">
+                               @if (item.Images?.Count != 0)
+                               {
+                                    <img src="@($"data:image/jpeg;base64,{Convert.ToBase64String(item.Images.First())}")" alt="Image" style="height: 250px;" class="d-block w-100 card-img">
+                               }
+                                <div class="card-body" style="height: 100px;">
+                                    <h5 class="card-title" style="font-size: 15px; font-weight: 640;">@item.Title</h5
+                                        <h5>Цена: @item.Price руб.</h5>
+                                    <div class="card-button-container">
+                                        <button class="btn btn-outline-dark" style="width: 100%; border-color: #2b2d42; font-size: 14px;" @onclick="()=>ShowDetails(item)">Подробнее...</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                }
+            
+
+            }
+            else
+            {
+                <h5 style="color: gray;">Всех обезьянок раскупили.</h5>
+            }
+        
+    </div>
+    <AdvertisementDetailComponent @ref="AdvertisementDetail" />
+</div>
