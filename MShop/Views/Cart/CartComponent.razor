@@ -1,0 +1,54 @@
+﻿@using MShop.Models;
+@using MongoDB.Bson;
+@using MongoDB.Driver;
+@using static MShop.Models.Item;
+@using static MShop.Controllers.HomeController;
+@code {
+    bool Shown;
+    public Action? OnYes;
+    public Action? OnClose;
+    List<ObjectId> CartItemIds;
+    //public void ShowCart(Action onYes, Action onClose)
+    //{
+    //    OnYes = onYes;
+    //    Shown = true;
+    //    StateHasChanged();
+    //}
+
+    void LoadCartItems()
+    {
+        CartItemIds = new();
+        var res = UserCart.Items;
+        CartItemIds.AddRange(UserCart.Items);
+        //if (CartItemIds != null)
+        //{
+        //    ShowCart(null, null);
+        //}
+        StateHasChanged();
+    }
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        LoadCartItems();
+    }
+    //void Close()
+    //{
+    //    OnClose?.Invoke();
+    //    Shown = false;
+    //}
+}
+
+@if (Shown)
+{
+    <div class="modal" tabindex="-1" style="display: block; background-color: rgba(0, 0, 0, 0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 class="modal-title" style="color: gray;">Корзина</h3>
+                    @*<button type="button" class="btn-close" @onclick="Close"></button>*@
+                </div>
+            </div>
+        </div>
+    </div>
+}

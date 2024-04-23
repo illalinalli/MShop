@@ -1,0 +1,81 @@
+﻿@using MShop.Views.Advertisement;
+@using MongoDB.Bson;
+@using MongoDB.Driver;
+@using Models;
+@using static Advertisement.AdvertisementDetailComponent;
+@using static Controllers.HomeController;
+@code {
+    List<Item>? Items;
+    public static AdvertisementDetailComponent? AdvertisementDetail = new();
+    public static FavoritesComponent FavoritesComp = new();
+
+    void LoadFavoriteItems()
+    {
+        if (CurUser == null || CurUser.Favorites == null || Items == null) return;
+
+        Items.Clear();
+
+        foreach (var it in CurUser.Favorites)
+        {
+            var res = Database.ItemCollection.Find(x => x.Id == it).FirstOrDefault();
+            if (res == null) continue;
+            Items?.Add(res);
+        }
+    }
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        Items = new();
+        LoadFavoriteItems();
+    }
+   
+    public void ShowDetails(Item item)
+    {
+        AdvertisementDetail?.ShowDialog(item, null, null);
+    }
+    public void Update()
+    {
+        LoadFavoriteItems();
+        StateHasChanged();
+    }
+}
+
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col" style="font-weight:600; font-size: medium;">Избранное</div>
+    </div>
+    <div class="row">
+        <div class="col">
+            @if (Items.Count() != 0)
+            {
+                foreach (var item in Items)
+                {
+                    if (item.Images != null)
+                    {
+                        <div class="col-xl-3 col-lg-4 col-md-5 col-sm-6 col-12 pt-3 pb-5">
+                            <div class="card" sstyle="width: 24rem;">
+                                @if (item.Images?.Count != 0)
+                                {
+                                    <img src="@($"data:image/jpeg;base64,{Convert.ToBase64String(item.Images.First())}")" alt="Image" class="d-block w-100 card-img">
+                                }
+                                <div class="card-body">
+                                    <h5 class="card-title" style="font-size: 15px; font-weight: 640;">@item.Title</h5>
+                                    <div class="card-button-container">
+                                        <button class="btn btn-outline-dark" style="width: 80%; border-color: #2b2d42; font-size: 14px;" @onclick="()=>ShowDetails(item)">Подробнее...</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                }
+            }
+            else
+            {
+                <h5 style="color: gray;">Здесь появятся ваши избранные публикации.</h5>
+            }
+        </div>
+    </div>
+    <AdvertisementDetailComponent @ref="AdvertisementDetail" FavoritesComp="this" />
+</div>
+

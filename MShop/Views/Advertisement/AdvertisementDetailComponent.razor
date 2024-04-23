@@ -16,20 +16,11 @@
     List<PropertyValue>? properties;
     bool popupShown;
     bool isFavorite;
-    //FavoritesComponent favorites = new();
+    FavoritesComponent favorites = new();
     bool ShowComponent;
 
-    //[Parameter]
-    //public MainPageSettings MainPage { get; set; }
-
-    //[Parameter]
-    //public RecommendationsComponent RecommendationsComp { get; set; }
-
-    //[Parameter]
-    //public FavoritesComponent FavoritesComp { get; set; }
-
-    //[Inject]
-    //public NavigationManager NavigationManager { get; set; }
+    [Parameter]
+    public FavoritesComponent FavoritesComp { get; set; }
 
     public event Action? OnUpdateMainPage;
     public event Action? OnUpdateFavPage;
@@ -45,14 +36,14 @@
         OnYes = onYes;
         Shown = true;
         selectedItem = item;
-        //if (CurUser != null)
-        //{
-        //    if (CurUser.Favorites == null)
-        //    {
-        //        CurUser.Favorites = new();
-        //    }
-        //    isFavorite = CurUser.Favorites.Any(x => x == selectedItem.Id);
-        //}
+        if (CurUser != null)
+        {
+            if (CurUser.Favorites == null)
+            {
+                CurUser.Favorites = new();
+            }
+            isFavorite = CurUser.Favorites.Any(x => x == selectedItem.Id);
+        }
         properties = new();
         foreach (var p in item.Properties)
         {
@@ -61,81 +52,53 @@
         StateHasChanged();
     }
 
-    //public void AddToViewingHistory(ObjectId itemId)
-    //{
-    //    if (CurUser == null) return;
-    //    if (CurUser.ViewingHistory == null)
-    //    {
-    //        CurUser.ViewingHistory = new List<HistoryItem>();
-    //    }
-    //    if (selectedItem.UserRef != CurUser.Id)
-    //    {
-    //        CurUser.ViewingHistory.Add(new HistoryItem
-    //        {
-    //            ItemId = itemId,
-    //            ViewedAt = DateTimeOffset.UtcNow
-    //        });
-    //    }
-    //}
-
-
     void Close()
     {
         OnClose?.Invoke();
         Shown = false;
 
-        //if (CurUser != null)
-        //{
-        //    // обновляем user
-        //    var filter = Builders<User>.Filter.Eq("_id", CurUser.Id);
-        //    AddToViewingHistory(selectedItem.Id);
-        //    // выполнение операции upsert
-        //    UserCollection?.ReplaceOneAsync(filter, CurUser, ReplaceOptionsUpsert);
+        if (CurUser != null)
+        {
+            // обновляем user
+            var filter = Builders<User>.Filter.Eq("_id", CurUser.Id);
+            // выполнение операции upsert
+            UserCollection?.ReplaceOneAsync(filter, CurUser, ReplaceOptionsUpsert);
 
-        //    //if (MainPage != null) {
-        //    //    MainPage.Update();
-        //    //}
-
-        //    if (FavoritesComp != null)
-        //    {
-        //        FavoritesComp.Update();
-        //    }
-
-        //    if (RecommendationsComp != null)
-        //    {
-        //        RecommendationsComp.Update();
-        //    }
-
-        //}
+            if (FavoritesComp != null)
+            {
+                FavoritesComp.Update();
+            }
+        }
     }
 
-    void Call()
+    void AddToCart()
     {
-        popupShown = true;
+        if (CurUser != null && UserCart != null)
+        {
+            UserCart.AddToCart(selectedItem);
+        }
         StateHasChanged();
     }
 
-    //void ClickOnFav()
-    //{
-    //    if (CurUser == null) return;
-    //    isFavorite = !isFavorite;
+    void ClickOnFav()
+    {
+        if (CurUser == null) return;
+        isFavorite = !isFavorite;
 
-    //    if (isFavorite)
-    //    {
-    //        CurUser.Favorites?.Add(selectedItem.Id);
-    //    }
-    //    else
-    //    {
-    //        CurUser.Favorites?.Remove(selectedItem.Id);
-    //    }
-
-    //}
+        if (isFavorite)
+        {
+            CurUser.Favorites?.Add(selectedItem.Id);
+        }
+        else
+        {
+            CurUser.Favorites?.Remove(selectedItem.Id);
+        }
+    }
     void HoldPopup()
     {
         popupShown = false;
         StateHasChanged();
     }
-
 }
 
 @if (Shown)
@@ -154,13 +117,15 @@
 
                         @if (isFavorite)
                         {
-                            <button type="button" class="btn btn-secondary-outline btn-lg mb-4" style="background-color: lightgray; color: black; font-weight: 400;">
+                            <button type="button" class="btn btn-secondary-outline btn-lg mb-4" 
+                            style="background-color: lightgray; color: black; font-weight: 400;" @onclick="ClickOnFav">
                                 <i class="bi bi-heart-fill"></i> В избранном
                             </button>
                         }
                         else
                         {
-                            <button type="button" class="btn btn-secondary-outline btn-lg mb-4" style="background-color: lightgray; color: black; font-weight: 400;">
+                            <button type="button" class="btn btn-secondary-outline btn-lg mb-4" 
+                            style="background-color: lightgray; color: black; font-weight: 400;" @onclick="ClickOnFav">
                                 <i class="bi bi-heart"></i> Добавить в избранное
                             </button>
                         }
@@ -182,29 +147,24 @@
                         @if (properties != null)
                         {
                             <h4 class="decription-item">Пол: @propertyValues.FirstOrDefault(x => x.PropTypeRef == new ObjectId("660be10e508b9c0f454f5d51")).Name</h4>
-                            @*<h4>Окрас: </h4>
-                @foreach (var a in properties.FindAll(x => x.PropTypeRef == new ObjectId("658ab0a38a4dcfd166a80346")))
-                {
-                <div style="font-size: small; font-weight: 500">@a.Name</div>
-                }*@
+                           
                         }
                         <h2>Описание</h2>
                         <h4 class="decription-item">@selectedItem.LongDescription</h4>
 
                     }
-                    @* @if (popupShown)
-                {
-                <h5 class="popup-call">Вы сделали дозвон в Азербайджан. Скоро вам перезвонят.</h5>
-                //Thread.Sleep(7000);
-                }*@
-                    @* @if (popupShown) {
-
-                HoldPopup();
-                }*@
+                   
                     <h5>Цена: @selectedItem.Price руб.</h5>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-primary-outline" style="font-size: small; flex: 1; background-color: forestgreen; color: white;" @onclick="Call">Позвонить</button>
+                    @if (UserCart.Items.Contains(selectedItem.Id))
+                    {
+                        <button type="button" class="btn btn-primary-outline" style="font-size: small; flex: 1; color: forestgreen; border-color: forestgreen;" @onclick="AddToCart">В корзине</button>
+                    }
+                    else
+                    {
+                        <button type="button" class="btn btn-primary" style="font-size: small; flex: 1; background-color: forestgreen; color: white;" @onclick="AddToCart">В корзину</button>
+                    }
                     <button type="button" class="btn btn-secondary-outline " style="font-size: small; flex: 1; background-color: lightgray; color: black; font-weight: 400;" @onclick="Close">Закрыть</button>
                 </div>
             </div>

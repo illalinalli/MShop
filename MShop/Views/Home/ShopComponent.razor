@@ -1,11 +1,12 @@
 ﻿@using MShop.Models;
 @using static MShop.Models.Database;
+@using MShop.Views.Cart;
 @using MongoDB.Bson;
 @using MongoDB.Driver;
 @using MShop.Views.Advertisement;
 
 @code {
-
+    //public CartComponent Cart = new();
     public AdvertisementDetailComponent AdvertisementDetail = new();
     public List<Item> Monkeys = new();
 
@@ -14,11 +15,16 @@
         base.OnInitialized();
         var allItems = ItemCollection.Find(new BsonDocument()).ToList();
         Monkeys = allItems.FindAll(x => x.Properties.Contains(new ObjectId("660be1f2508b9c0f454f5d62")));
+
     }
     public void ShowDetails(Item item)
     {
         AdvertisementDetail.ShowDialog(item, null, null);
     }
+    //void CartClicked()
+    //{
+    //    Cart.ShowCart(null, null);
+    //}
 }
 
 <div class="container-fluid">
@@ -50,8 +56,6 @@
                         </div>
                     }
                 }
-            
-
             }
             else
             {
@@ -60,4 +64,6 @@
         
     </div>
     <AdvertisementDetailComponent @ref="AdvertisementDetail" />
+   @* <CartComponent @ref="Cart" />*@
+    
 </div>
