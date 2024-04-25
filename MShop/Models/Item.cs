@@ -1,4 +1,5 @@
 ﻿using MongoDB.Bson;
+using MongoDB.Bson.Serialization.Attributes;
 
 namespace MShop.Models
 {
@@ -14,6 +15,8 @@ namespace MShop.Models
         public DateTimeOffset? CreationDate { get; set; }
         public double Price { get; set; }
 
+        [BsonIgnore]
+        public int Quantity { get; set; }
         public Item()
         {
             Id = ObjectId.GenerateNewId();

@@ -10,7 +10,8 @@ var builder = WebApplication.CreateBuilder(args);
 var services = builder.Services;
 var configuration = builder.Configuration;
 
-Database DB = new Database();
+Database DB = new Database(configuration);
+
 // Add services to the container.
 
 builder.Services.AddControllersWithViews();

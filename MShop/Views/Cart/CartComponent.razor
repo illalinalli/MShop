@@ -1,29 +1,28 @@
 ﻿@using MShop.Models;
+@using static MShop.Models.Database;
 @using MongoDB.Bson;
 @using MongoDB.Driver;
 @using static MShop.Models.Item;
 @using static MShop.Controllers.HomeController;
+@using static MShop.Views.Home.ShopComponent;
 @code {
     bool Shown;
     public Action? OnYes;
     public Action? OnClose;
-    List<ObjectId> CartItemIds;
-    //public void ShowCart(Action onYes, Action onClose)
-    //{
-    //    OnYes = onYes;
-    //    Shown = true;
-    //    StateHasChanged();
-    //}
 
+    //List<ObjectId> CartItemIds;
+    //List<Item> CartItems;
     void LoadCartItems()
     {
-        CartItemIds = new();
-        var res = UserCart.Items;
-        CartItemIds.AddRange(UserCart.Items);
-        //if (CartItemIds != null)
-        //{
-        //    ShowCart(null, null);
-        //}
+        //CartItemIds = new();
+        //CartItems = new();
+        UserCart.Items.ForEach(x =>
+        {
+            var curItem = AllItems.FirstOrDefault(item => item.Id == x);
+            if (curItem != null) UserCart.CartItems.Add(curItem);
+        });
+
+        //CartItemIds.AddRange(UserCart.Items);
         StateHasChanged();
     }
 
@@ -32,23 +31,78 @@
         base.OnInitialized();
         LoadCartItems();
     }
-    //void Close()
-    //{
-    //    OnClose?.Invoke();
-    //    Shown = false;
-    //}
+    void Decrement(ObjectId itemId)
+    {
+        UserCart.QuantityDecrement(itemId);
+        StateHasChanged();
+    }
+
+    void Remove(Item item)
+    {
+        UserCart.RemoveItem(item);
+        StateHasChanged();
+    }
+
+    void Increment(Item item)
+    {
+        UserCart.AddToCart(item);
+        StateHasChanged();
+    }
+
+    void SaveOrder()
+    {
+        Order order = new()
+        {
+            ItemRefs = UserCart.CartItems.Select(x => x.Id).ToList(),
+            TotalPrice = UserCart.CalculateTotal(),
+            UserRef = CurUser.Id
+        };
+
+        var filter = Builders<Order>.Filter.Eq("_id", order.Id);
+
+        OrderCollection?.ReplaceOneAsync(filter, order, ReplaceOptionsUpsert);
+
+        UserCart.CartItems.Clear();
+        UserCart.Items.Clear();
+
+        // вызов всплывашки статуса
+
+
+    }
 }
 
-@if (Shown)
-{
-    <div class="modal" tabindex="-1" style="display: block; background-color: rgba(0, 0, 0, 0.5);">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3 class="modal-title" style="color: gray;">Корзина</h3>
-                    @*<button type="button" class="btn-close" @onclick="Close"></button>*@
-                </div>
-            </div>
-        </div>
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col" style="font-weight:600; font-size: medium;">Корзина</div>
     </div>
-}
+    <div class="row">
+        @if (UserCart.CartItems.Count() != 0)
+        {
+            @foreach (var item in UserCart.CartItems)
+            {
+                <div class="card mb-3">
+                    @if (item.Images?.Count > 0)
+                    {
+                        <img src="@($"data:image/jpeg;base64,{Convert.ToBase64String(item.Images.First())}")" alt="Image" class="card-img-top" style="height: 250px;">
+                    }
+                    <div class="card-body">
+                        <h5 class="card-title">@item.Title</h5>
+                        <p class="card-text">Цена: @(item.Price * item.Quantity) руб.</p>
+                        <p class="card-text">Количество: @item.Quantity </p>
+                        <button class="btn btn-primary" @onclick="() => Decrement(item.Id)">-</button>
+                        <button class="btn btn-primary" @onclick="() => Increment(item)">+</button>
+                        <button class="btn btn-danger" @onclick="() => Remove(item)">Удалить</button>
+                    </div>
+                </div>
+            }
+            <div>
+                <p>Итоговая сумма: @UserCart.CalculateTotal() руб.</p>
+                <button class="btn btn-success" @onclick="() => SaveOrder()">Оформить заказ</button>
+            </div>
+        }
+        else
+        {
+            <h5 style="color: gray;">Добавьте товары в корзину.</h5>
+        }
+    </div>
+</div>

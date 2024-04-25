@@ -9,12 +9,13 @@
     //public CartComponent Cart = new();
     public AdvertisementDetailComponent AdvertisementDetail = new();
     public List<Item> Monkeys = new();
+    public static List<Item> AllItems;
 
     protected override void OnInitialized()
     {
         base.OnInitialized();
-        var allItems = ItemCollection.Find(new BsonDocument()).ToList();
-        Monkeys = allItems.FindAll(x => x.Properties.Contains(new ObjectId("660be1f2508b9c0f454f5d62")));
+        AllItems = ItemCollection.Find(new BsonDocument()).ToList();
+        Monkeys = AllItems.FindAll(x => x.Properties.Contains(new ObjectId("660be1f2508b9c0f454f5d62")));
 
     }
     public void ShowDetails(Item item)

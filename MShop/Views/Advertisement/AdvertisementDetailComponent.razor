@@ -18,6 +18,7 @@
     bool isFavorite;
     FavoritesComponent favorites = new();
     bool ShowComponent;
+    bool addedToCart;
 
     [Parameter]
     public FavoritesComponent FavoritesComp { get; set; }
@@ -43,6 +44,8 @@
                 CurUser.Favorites = new();
             }
             isFavorite = CurUser.Favorites.Any(x => x == selectedItem.Id);
+            var a = UserCart;
+            addedToCart = UserCart.CartItems.Any(y => y.Id == selectedItem.Id);
         }
         properties = new();
         foreach (var p in item.Properties)
@@ -73,11 +76,21 @@
 
     void AddToCart()
     {
-        if (CurUser != null && UserCart != null)
+        if (CurUser == null && UserCart == null) return;
+
+        addedToCart = !addedToCart;
+
+        if (addedToCart)
         {
             UserCart.AddToCart(selectedItem);
+            // UserCart.Items.AddRange(UserCart.CartItems.Select(x => x.Id));
         }
-        StateHasChanged();
+        else
+        {
+            UserCart.RemoveItem(selectedItem);
+        }
+
+       // StateHasChanged();
     }
 
     void ClickOnFav()
@@ -157,7 +170,7 @@
                     <h5>Цена: @selectedItem.Price руб.</h5>
                 </div>
                 <div class="modal-footer">
-                    @if (UserCart.Items.Contains(selectedItem.Id))
+                    @if (addedToCart)
                     {
                         <button type="button" class="btn btn-primary-outline" style="font-size: small; flex: 1; color: forestgreen; border-color: forestgreen;" @onclick="AddToCart">В корзине</button>
                     }

@@ -1,6 +1,8 @@
 ﻿using MongoDB.Bson;
 using MongoDB.Driver;
+using System.Configuration;
 using System.Text;
+using Microsoft.Extensions.Configuration;
 
 namespace MShop.Models
 {
@@ -13,6 +15,7 @@ namespace MShop.Models
         public static IMongoCollection<AnimalType>? AnimalTypeCollection;
         public static IMongoCollection<PropertyType>? PropertyTypeCollection;
         public static IMongoCollection<PropertyValue>? PropertyValueCollection;
+        public static IMongoCollection<Order>? OrderCollection;
         public static string GetHash(string password)
         {
             var sha = System.Security.Cryptography.SHA1.Create();
@@ -30,9 +33,9 @@ namespace MShop.Models
                 UserCollection?.ReplaceOne(filter, user, ReplaceOptionsUpsert);
             }
         }
-        public Database()
+        public Database(IConfiguration configuration)
         {
-            var connectionString = "mongodb://localhost:27017";
+            string connectionString = configuration.GetConnectionString("MongoDBConnection");
             var client = new MongoClient(connectionString);
             DB = client.GetDatabase("MonkeyShop");
             UserCollection = DB.GetCollection<User>("User");
@@ -41,6 +44,7 @@ namespace MShop.Models
             AnimalTypeCollection = DB.GetCollection<AnimalType>("AnimalType");
             PropertyTypeCollection = DB.GetCollection<PropertyType>("PropertyType");
             PropertyValueCollection = DB.GetCollection<PropertyValue>("PropertyValue");
+            OrderCollection = DB.GetCollection<Order>("Order");
             //HashPassword();
         }
 
